@@ -44,7 +44,6 @@ please open an issue.
 Checked boxes are features currently being developed.
 All other items are planned features and may be changed or removed.
 
-- [x] Add support for more commands from the command line utility
 - [x] Improve usage output
 - [x] Create tests for each module to ensure stability and robustness
 - [ ] Remove old accounts and handles that were never used
@@ -124,6 +123,8 @@ Currently, available commands are:
 
 - `new account <address>`: creates a new account, and registers `address` as the main email address to send all messages. Will output the generated secret token for that account
 - `new handle <secret>`: creates a new handle for the account with the specified secret token
+- `delete account <secret>`: deletes the account with the registered `secret`
+- `delete handle <handle> <secret>`: deletes the handle `handle` associated with the account with the registered `secret`
 - `list <secret>`: lists all handles registered for a given account
 - `stop`: stop the current server process
 

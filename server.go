@@ -53,6 +53,21 @@ type newAccountCommand struct {
 	errorCh  chan error
 }
 
+type deleteHandleCommand struct {
+	source   string
+	handle   string
+	secret   string
+	resultCh chan string
+	errorCh  chan error
+}
+
+type deleteAccountCommand struct {
+	source   string
+	secret   string
+	resultCh chan string
+	errorCh  chan error
+}
+
 type terminateCommand struct{}
 
 const (
@@ -287,15 +302,15 @@ func (s *Server) SendCommand(source, args string) (string, error) {
 	// c[1:] works even if len(c) == 1, and in this case it's just an empty slice
 	extra := c[1:]
 
+	// It is important to make buffered channels, because we'll send values and close them afterwards
+	resultCh := make(chan string, 1)
+	errorCh := make(chan error, 1)
+
 	switch command {
 	case "new":
 		if len(extra) != 2 {
 			return "", ErrWrongCommand
 		}
-
-		// It is important to make buffered channels, because we'll send values and close them afterwards
-		resultCh := make(chan string, 1)
-		errorCh := make(chan error, 1)
 
 		switch extra[0] {
 		case "handle":
@@ -305,8 +320,6 @@ func (s *Server) SendCommand(source, args string) (string, error) {
 				resultCh:      resultCh,
 				errorCh:       errorCh,
 			}
-
-			return <-resultCh, <-errorCh
 		case "account":
 			s.commandCh <- newAccountCommand{
 				source:   source,
@@ -314,16 +327,46 @@ func (s *Server) SendCommand(source, args string) (string, error) {
 				resultCh: resultCh,
 				errorCh:  errorCh,
 			}
-
-			return <-resultCh, <-errorCh
 		default:
 			log.Printf("[DEBUG] received unknown 'new' option: %s\n", args)
 			return "", ErrWrongCommand
+		}
+	case "delete":
+		if len(extra) < 1 {
+			return "", ErrWrongCommand
+		}
+
+		switch extra[0] {
+		case "handle":
+			if len(extra) != 3 {
+				return "", ErrWrongCommand
+			}
+
+			s.commandCh <- deleteHandleCommand{
+				source:   source,
+				handle:   extra[1],
+				secret:   extra[2],
+				resultCh: resultCh,
+				errorCh:  errorCh,
+			}
+		case "account":
+			if len(extra) != 2 {
+				return "", ErrWrongCommand
+			}
+
+			s.commandCh <- deleteAccountCommand{
+				source:   source,
+				secret:   extra[1],
+				resultCh: resultCh,
+				errorCh:  errorCh,
+			}
 		}
 	default:
 		log.Printf("[DEBUG] received unknown command %s\n", args)
 		return "", ErrUnknownCommand
 	}
+
+	return <-resultCh, <-errorCh
 }
 
 // Receives any command that needs to be executed, and executes them.
@@ -331,21 +374,21 @@ func handleCommands(s *Server) {
 	for {
 		command := <-s.commandCh
 
+		var res string
+		var err error
+		var resCh chan string
+		var errCh chan error
+
 		switch t := command.(type) {
 		case terminateCommand:
 			log.Println("[INFO] Terminating server")
 			return
 		case newHandleCommand:
-			res, err := s.NewHandle(t.accountSecret)
-			t.errorCh <- err
-			t.resultCh <- res
-			close(t.resultCh)
-			close(t.errorCh)
+			res, err = s.NewHandle(t.accountSecret)
+			resCh = t.resultCh
+			errCh = t.errorCh
 		case newAccountCommand:
 			// New accounts should be created locally only, at least at first
-			var res string
-			var err error
-
 			if t.source == "websocket" {
 				err = ErrInvalidPermission
 				res = ""
@@ -353,13 +396,43 @@ func handleCommands(s *Server) {
 				res, err = s.NewAccount(t.target)
 			}
 
-			t.errorCh <- err
-			t.resultCh <- res
-			close(t.resultCh)
-			close(t.errorCh)
+			resCh = t.resultCh
+			errCh = t.errorCh
+		case deleteHandleCommand:
+			res = ""
+			if t.source == "websocket" {
+				err = ErrInvalidPermission
+			} else {
+				err = s.DeleteHandle(t.secret, t.handle)
+				if err == nil {
+					res = "success"
+				}
+			}
+
+			resCh = t.resultCh
+			errCh = t.errorCh
+		case deleteAccountCommand:
+			res = ""
+			if t.source == "websocket" {
+				err = ErrInvalidPermission
+			} else {
+				err = s.DeleteAccount(t.secret)
+				if err == nil {
+					res = "success"
+				}
+			}
+
+			resCh = t.resultCh
+			errCh = t.errorCh
 		default:
 			log.Printf("[DEBUG] unrecognized command %v\n", t)
+			continue
 		}
+
+		errCh <- err
+		resCh <- res
+		close(errCh)
+		close(resCh)
 	}
 }
 
