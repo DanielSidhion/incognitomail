@@ -54,12 +54,6 @@ func main() {
 		}
 	}
 
-	if !incognitomail.ValidConfig() {
-		log.Println("[INFO] Invalid configuration")
-		fmt.Println("The configuration specified is invalid.")
-		os.Exit(1)
-	}
-
 	success, err := parseAndExecuteCommand()
 	if err == errWrongUsage {
 		flag.Usage()

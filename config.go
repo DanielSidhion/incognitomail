@@ -1,6 +1,10 @@
 package incognitomail
 
 import (
+	"errors"
+	"io"
+	"os"
+
 	"gopkg.in/gcfg.v1"
 )
 
@@ -31,8 +35,7 @@ type config struct {
 }
 
 var (
-	// Config holds all global configuration. It is initially started with default values, and then overridden by reading values from a file.
-	Config = config{
+	defaultConfig = config{
 		General: generalConfig{
 			MailSystem:    "postfix",
 			UnixSockPath:  "/tmp/incognitomail.sock",
@@ -46,14 +49,45 @@ var (
 			Type:         "boltdb",
 			DatabasePath: "incognitomail.db",
 		},
+		PostfixConfig: postfixConfig{
+			Domain: "",
+			MapFilePath: "",
+		},
 	}
+
+	// Config holds all global configuration.
+	Config = defaultConfig
+
+	// ErrInvalidConfig is used when loading a configuration with invalid values.
+	ErrInvalidConfig = errors.New("invalid configuration values")
 )
+
+// ResetConfig switches all values back to the default.
+func ResetConfig() {
+	Config = defaultConfig
+}
 
 // ReadConfigFromFile reads the file in the given path and parses all config data from it. Any value not defined in this configuration file will be kept as its default value.
 func ReadConfigFromFile(path string) error {
-	err := gcfg.ReadFileInto(&Config, path)
+	f, err := os.Open(path)
 	if err != nil {
 		return err
+	}
+	defer f.Close()
+
+	err = ReadConfigFromReader(f)
+	return err
+}
+
+// ReadConfigFromReader parses all config data from the given reader. Any value not defined in the read string will be kept as its default value.
+func ReadConfigFromReader(reader io.Reader) error {
+	err := gcfg.ReadInto(&Config, reader)
+	if err != nil {
+		return err
+	}
+
+	if !ValidConfig() {
+		return ErrInvalidConfig
 	}
 
 	return nil

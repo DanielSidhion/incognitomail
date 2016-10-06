@@ -1,0 +1,16 @@
+[General]
+MailSystem = "postfix"
+UnixSockPath = "/tmp/incognitomail/incognito.sock"
+LockFilePath = "/var/lock/incognitomail/incognito.lock"
+ListenPath = "/"
+ListenAddress = ":9090"
+TLSCertFile = "server.pem"
+TLSKeyFile = "server.key"
+
+[Persistence]
+Type = "boltdb"
+DatabasePath = "incognito.db"
+
+[PostfixConfig]
+Domain = "@sidhion.com"
+MapFilePath = "/tmp/postfix/canonical"

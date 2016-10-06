@@ -1,0 +1,3 @@
+[PostfixConfig]
+Domain = "@sidhion.com"
+MapFilePath = "/tmp/postfix/canonical"
