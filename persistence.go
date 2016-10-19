@@ -174,7 +174,11 @@ func (a *IncognitoData) DeleteAccountHandle(secret, handle string) {
 			return ErrAccountNotFound
 		}
 
+		// Also delete from the global handles name
+		hb := tx.Bucket([]byte(handlesBucketName))
+
 		b.Delete([]byte(handle))
+		hb.Delete([]byte(handle))
 		return nil
 	})
 }
