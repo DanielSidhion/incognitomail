@@ -7,17 +7,24 @@ import (
 	"github.com/danielsidhion/incognitomail"
 )
 
+// Ensure an empty config returns an error.
 func TestConfig_empty(t *testing.T) {
 	incognitomail.ResetConfig()
 
+	// Representing an empty config file as well.
 	reader := strings.NewReader("")
 
 	err := incognitomail.ReadConfigFromReader(reader)
 	if err == nil {
-		t.Error(err)
+		t.Fatal("expected error")
+	}
+
+	if err != incognitomail.ErrInvalidConfig {
+		t.Fatal("expected ErrInvalidConfig")
 	}
 }
 
+// Ensure that resetting the config actually changes all values to the default.
 func TestConfig_reset(t *testing.T) {
 	incognitomail.Config.General.MailSystem = "c0mpl3t3g4rb4g3"
 	incognitomail.Config.General.UnixSockPath = "c0mpl3t3g4rb4g3"
@@ -78,12 +85,13 @@ func TestConfig_reset(t *testing.T) {
 	}
 }
 
+// Ensures that a minimal config (one with only required values) doesn't return any errors.
 func TestConfig_minimal(t *testing.T) {
 	incognitomail.ResetConfig()
 
 	err := incognitomail.ReadConfigFromFile("testdata/minimal_config")
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	if incognitomail.Config.PostfixConfig.Domain != "@sidhion.com" {
@@ -95,12 +103,13 @@ func TestConfig_minimal(t *testing.T) {
 	}
 }
 
+// Ensures that a config with all specified values doesn't return any errors.
 func TestConfig_full(t *testing.T) {
 	incognitomail.ResetConfig()
 
 	err := incognitomail.ReadConfigFromFile("testdata/full_config")
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	if incognitomail.Config.General.MailSystem != "postfix" {
