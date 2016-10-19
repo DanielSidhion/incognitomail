@@ -3,17 +3,17 @@
 package incognitomail
 
 import (
-  "bytes"
+	"bytes"
 )
 
 // FuzzConfig is the entry point for fuzzing stuff related to config parsing.
 func FuzzConfig(data []byte) int {
-  reader := bytes.NewReader(data)
+	reader := bytes.NewReader(data)
 
-  err := ReadConfigFromReader(reader)
-  if err != nil {
-    return 0
-  }
+	err := ReadConfigFromReader(reader)
+	if err != nil {
+		return 0
+	}
 
-  return 1
+	return 1
 }

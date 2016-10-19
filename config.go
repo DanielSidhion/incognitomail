@@ -50,7 +50,7 @@ var (
 			DatabasePath: "incognitomail.db",
 		},
 		PostfixConfig: postfixConfig{
-			Domain: "",
+			Domain:      "",
 			MapFilePath: "",
 		},
 	}
