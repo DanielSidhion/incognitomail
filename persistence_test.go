@@ -9,8 +9,10 @@ import (
 )
 
 const (
-	accountSecret   = "testsecret"
-	accountTarget   = "testtarget@example.com"
+	accountSecret1  = "testsecret1"
+	accountSecret2  = "testsecret2"
+	accountTarget1  = "testtarget1@example.com"
+	accountTarget2  = "testtarget2@example.com"
 	accountHandle1  = "testhandle1"
 	accountHandle2  = "testhandle2"
 	neverUsedHandle = "testneverusedhandle"
@@ -68,14 +70,46 @@ func commonTeardown(t *testing.T, data *incognitomail.IncognitoData) {
 func TestPersistence_NewAccount(t *testing.T) {
 	data := commonSetup(t)
 
-	err := data.NewAccount(accountSecret, accountTarget)
+	err := data.NewAccount(accountSecret1, accountTarget1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	res := data.HasAccount(accountSecret)
+	res := data.HasAccount(accountSecret1)
 	if !res {
 		t.Fatal("account created is not present")
+	}
+
+	commonTeardown(t, data)
+}
+
+// Ensure a new account needs a non-empty secret.
+func TestPersistence_NewAccount_SecretRequired(t *testing.T) {
+	data := commonSetup(t)
+
+	err := data.NewAccount("", accountTarget1)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	if err != incognitomail.ErrEmptySecret {
+		t.Fatal("expected ErrEmptySecret")
+	}
+
+	commonTeardown(t, data)
+}
+
+// Ensure a new account needs a non-empty target.
+func TestPersistence_NewAccount_TargetRequired(t *testing.T) {
+	data := commonSetup(t)
+
+	err := data.NewAccount(accountSecret1, "")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	if err != incognitomail.ErrEmptyTarget {
+		t.Fatal("expected ErrEmptyTarget")
 	}
 
 	commonTeardown(t, data)
@@ -85,17 +119,17 @@ func TestPersistence_NewAccount(t *testing.T) {
 func TestPersistence_CheckTarget(t *testing.T) {
 	data := commonSetup(t)
 
-	err := data.NewAccount(accountSecret, accountTarget)
+	err := data.NewAccount(accountSecret1, accountTarget1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	target, err := data.GetAccountTarget(accountSecret)
+	target, err := data.GetAccountTarget(accountSecret1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if target != accountTarget {
+	if target != accountTarget1 {
 		t.Fatal("retrieved account target is not the same as inserted")
 	}
 
@@ -106,14 +140,14 @@ func TestPersistence_CheckTarget(t *testing.T) {
 func TestPersistence_DeleteAccount(t *testing.T) {
 	data := commonSetup(t)
 
-	err := data.NewAccount(accountSecret, accountTarget)
+	err := data.NewAccount(accountSecret1, accountTarget1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	data.DeleteAccount(accountSecret)
+	data.DeleteAccount(accountSecret1)
 
-	res := data.HasAccount(accountSecret)
+	res := data.HasAccount(accountSecret1)
 	if res {
 		t.Fatal("deleted account is still present")
 	}
@@ -125,14 +159,71 @@ func TestPersistence_DeleteAccount(t *testing.T) {
 func TestPersistence_NewHandle(t *testing.T) {
 	data := commonSetup(t)
 
-	err := data.NewAccount(accountSecret, accountTarget)
+	err := data.NewAccount(accountSecret1, accountTarget1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = data.NewAccountHandle(accountSecret, accountHandle1)
+	err = data.NewAccountHandle(accountSecret1, accountHandle1)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	commonTeardown(t, data)
+}
+
+// Ensure a repeated handle can't be created (same account).
+func TestPersistence_RepeatedHandle_SameAccount(t *testing.T) {
+	data := commonSetup(t)
+
+	err := data.NewAccount(accountSecret1, accountTarget1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = data.NewAccountHandle(accountSecret1, accountHandle1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = data.NewAccountHandle(accountSecret1, accountHandle1)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	if err != incognitomail.ErrHandleExists {
+		t.Fatal("expected ErrHandleExists")
+	}
+
+	commonTeardown(t, data)
+}
+
+// Ensure a repeated handle can't be created (different accounts).
+func TestPersistence_RepeatedHandle_DifferentAccounts(t *testing.T) {
+	data := commonSetup(t)
+
+	err := data.NewAccount(accountSecret1, accountTarget1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = data.NewAccount(accountSecret2, accountTarget2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = data.NewAccountHandle(accountSecret1, accountHandle1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = data.NewAccountHandle(accountSecret2, accountHandle1)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	if err != incognitomail.ErrHandleExists {
+		t.Fatal("expected ErrHandleExists")
 	}
 
 	commonTeardown(t, data)
@@ -142,22 +233,22 @@ func TestPersistence_NewHandle(t *testing.T) {
 func TestPersistence_ListHandles(t *testing.T) {
 	data := commonSetup(t)
 
-	err := data.NewAccount(accountSecret, accountTarget)
+	err := data.NewAccount(accountSecret1, accountTarget1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = data.NewAccountHandle(accountSecret, accountHandle1)
+	err = data.NewAccountHandle(accountSecret1, accountHandle1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = data.NewAccountHandle(accountSecret, accountHandle2)
+	err = data.NewAccountHandle(accountSecret1, accountHandle2)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	handles, err := data.ListAccountHandles(accountSecret)
+	handles, err := data.ListAccountHandles(accountSecret1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,12 +272,12 @@ func TestPersistence_ListHandles(t *testing.T) {
 func TestPersistence_CheckHandlesGlobal(t *testing.T) {
 	data := commonSetup(t)
 
-	err := data.NewAccount(accountSecret, accountTarget)
+	err := data.NewAccount(accountSecret1, accountTarget1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = data.NewAccountHandle(accountSecret, accountHandle1)
+	err = data.NewAccountHandle(accountSecret1, accountHandle1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -204,19 +295,19 @@ func TestPersistence_CheckHandlesGlobal(t *testing.T) {
 func TestPersistence_DeleteHandle(t *testing.T) {
 	data := commonSetup(t)
 
-	err := data.NewAccount(accountSecret, accountTarget)
+	err := data.NewAccount(accountSecret1, accountTarget1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = data.NewAccountHandle(accountSecret, accountHandle1)
+	err = data.NewAccountHandle(accountSecret1, accountHandle1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	data.DeleteAccountHandle(accountSecret, accountHandle1)
+	data.DeleteAccountHandle(accountSecret1, accountHandle1)
 
-	handles, err := data.ListAccountHandles(accountSecret)
+	handles, err := data.ListAccountHandles(accountSecret1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -229,6 +320,31 @@ func TestPersistence_DeleteHandle(t *testing.T) {
 
 	if res {
 		t.Fatal("global handle check still identifies deleted handle ", accountHandle1)
+	}
+
+	commonTeardown(t, data)
+}
+
+// Ensure a deleted account also deletes the handles from the global list.
+func TestPersistence_DeleteAccount_GlobalHandles(t *testing.T) {
+	data := commonSetup(t)
+
+	err := data.NewAccount(accountSecret1, accountTarget1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = data.NewAccountHandle(accountSecret1, accountHandle1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data.DeleteAccount(accountSecret1)
+
+	res := data.HasHandleGlobal(accountHandle1)
+
+	if res {
+		t.Fatal("global handle check still identifies deleted account's handle ", accountHandle1)
 	}
 
 	commonTeardown(t, data)

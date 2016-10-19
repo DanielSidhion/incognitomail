@@ -19,6 +19,12 @@ const (
 )
 
 var (
+	// ErrEmptySecret is used when an empty account secret is used.
+	ErrEmptySecret = errors.New("empty secret")
+
+	// ErrEmptyTarget is used when an empty account target is used.
+	ErrEmptyTarget = errors.New("empty target")
+
 	// ErrAccountNotFound is used when an action requires an account to exist, but it wasn't found.
 	ErrAccountNotFound = errors.New("account not found")
 
@@ -71,6 +77,14 @@ func OpenIncognitoData() (*IncognitoData, error) {
 
 // NewAccount generates a new account with the given secret and target email address.
 func (a *IncognitoData) NewAccount(secret, target string) error {
+	if secret == "" {
+		return ErrEmptySecret
+	}
+
+	if target == "" {
+		return ErrEmptyTarget
+	}
+
 	err := a.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(secret))
 
@@ -113,6 +127,20 @@ func (a *IncognitoData) NewAccount(secret, target string) error {
 
 // DeleteAccount deletes all information related to the account with the given secret. If no account with that secret exists, it does nothing.
 func (a *IncognitoData) DeleteAccount(secret string) {
+	if secret == "" {
+		return
+	}
+
+	// Delete all handles associated with this account first
+	handles, err := a.ListAccountHandles(secret)
+	if err != nil {
+		return
+	}
+
+	for _, v := range handles {
+		a.DeleteAccountHandle(secret, v)
+	}
+
 	a.db.Update(func(tx *bolt.Tx) error {
 		tx.DeleteBucket([]byte(secret))
 
@@ -128,6 +156,10 @@ func (a *IncognitoData) DeleteAccount(secret string) {
 
 // NewAccountHandle stores the given handle for the account with the given secret.
 func (a *IncognitoData) NewAccountHandle(secret, handle string) error {
+	if secret == "" {
+		return ErrEmptySecret
+	}
+
 	err := a.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(secret))
 		if b == nil {
@@ -167,6 +199,10 @@ func (a *IncognitoData) NewAccountHandle(secret, handle string) error {
 
 // DeleteAccountHandle deletes the given handle from the account with the given secret. If either the account or the handle does not exist, this does nothing.
 func (a *IncognitoData) DeleteAccountHandle(secret, handle string) {
+	if secret == "" || handle == "" {
+		return
+	}
+
 	// Note that we still return errors from the following func, but don't care about them
 	a.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(secret))
@@ -185,6 +221,10 @@ func (a *IncognitoData) DeleteAccountHandle(secret, handle string) {
 
 // GetAccountTarget returns the target registered for the account with the given secret.
 func (a *IncognitoData) GetAccountTarget(secret string) (string, error) {
+	if secret == "" {
+		return "", ErrEmptySecret
+	}
+
 	var target string
 
 	err := a.db.View(func(tx *bolt.Tx) error {
@@ -209,6 +249,10 @@ func (a *IncognitoData) GetAccountTarget(secret string) (string, error) {
 
 // HasAccount returns true if an account with the given secret exists, false otherwise.
 func (a *IncognitoData) HasAccount(secret string) bool {
+	if secret == "" {
+		return false
+	}
+
 	err := a.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(accountsBucketName))
 		t := b.Get([]byte(secret))
@@ -224,6 +268,10 @@ func (a *IncognitoData) HasAccount(secret string) bool {
 
 // HasHandleGlobal returns true if the given handle exists for any account, false otherwise.
 func (a *IncognitoData) HasHandleGlobal(handle string) bool {
+	if handle == "" {
+		return false
+	}
+
 	err := a.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(handlesBucketName))
 		t := b.Get([]byte(handle))
@@ -239,6 +287,10 @@ func (a *IncognitoData) HasHandleGlobal(handle string) bool {
 
 // ListAccountHandles returns an array with all handles from the account with the given secret.
 func (a *IncognitoData) ListAccountHandles(secret string) ([]string, error) {
+	if secret == "" {
+		return nil, ErrEmptySecret
+	}
+
 	var result []string
 
 	err := a.db.View(func(tx *bolt.Tx) error {
