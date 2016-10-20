@@ -44,7 +44,6 @@ please open an issue.
 Checked boxes are features currently being developed.
 All other items are planned features and may be changed or removed.
 
-- [x] Improve usage output
 - [x] Create tests for each module to ensure stability and robustness
 - [ ] Remove old accounts and handles that were never used
 - [ ] Check if a rate limiting feature for web sockets makes sense
