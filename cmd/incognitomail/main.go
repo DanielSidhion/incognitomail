@@ -26,6 +26,16 @@ func init() {
 	flag.Usage = func() {
 		fmt.Printf("Usage: %s [-c|--config <path>] [command [arguments]]\n", os.Args[0])
 		fmt.Printf("\n")
+		fmt.Printf("if command is ommitted, will act as a server listening for connections\n\n")
+		fmt.Printf("commands:\n")
+		fmt.Printf("  new account <address>            \tcreates a new account with the given address\n")
+		fmt.Printf("  new handle <secret>              \tcreates a new handle for the account with the given secret\n")
+		fmt.Printf("  delete account <secret>          \tdeletes the account registered with the given secret\n")
+		fmt.Printf("  delete handle <handle> <secret>  \tdeletes the given handle. Uses the given secret to confirm account ownership\n")
+		fmt.Printf("  list <secret>                    \tlists all handles registered for the account with the given secret\n")
+		fmt.Printf("  stop                             \tstops the current server process\n\n")
+		fmt.Printf("options:\n")
+
 		flag.PrintDefaults()
 	}
 
