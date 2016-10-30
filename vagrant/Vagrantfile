@@ -1,0 +1,27 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# Checking if the env var with the development directory was set
+if ENV["INCOGNITOMAIL_DEV_DIR"].to_s.empty?
+  abort("Please set the INCOGNITOMAIL_DEV_DIR environment variable.")
+end
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "geerlingguy/ubuntu1604"
+  config.vm.hostname = "incognitomail"
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.name = "incognitomail_test" + Time.now.strftime("%Y%m%d_%H%M")
+  end
+
+  # Installs postfix and dovecot
+  config.vm.provision "shell", path: "provisioners/provision-mailstack.sh"
+
+  # Installs mutt
+  config.vm.provision "shell", path: "provisioners/provision-mutt.sh"
+
+  # Installs golang and fetches incognitomail dev build
+  config.vm.provision "shell", path: "provisioners/provision-golang.sh"
+  config.vm.synced_folder ENV["INCOGNITOMAIL_DEV_DIR"], "/home/vagrant/go/src/github.com/danielsidhion/incognitomail"
+  config.vm.provision "shell", path: "provisioners/provision-incognitomail.sh"
+end
